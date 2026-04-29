@@ -2,6 +2,7 @@
   "name": "salila-muha",
   "private": true,
   "scripts": {
+    "dev": "pnpm --parallel --filter backend --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev",
     "dev:frontend": "pnpm --filter frontend dev",
     "build": "pnpm --filter \"./apps/*\" build",
