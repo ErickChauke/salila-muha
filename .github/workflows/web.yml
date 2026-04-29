@@ -1,0 +1,39 @@
+name: Web CI
+
+on:
+  push:
+    branches: [master]
+    paths: ["apps/web/**", "packages/**"]
+  pull_request:
+    branches: [master]
+    paths: ["apps/web/**", "packages/**"]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter web typecheck
+
+      - run: pnpm --filter web lint
+
+      - run: pnpm --filter web test
+
+      - run: pnpm --filter web build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_YOCO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_YOCO_PUBLIC_KEY }}

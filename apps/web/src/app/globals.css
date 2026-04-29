@@ -1,0 +1,26 @@
+:root {
+  --color-primary: #E07A3C;
+  --color-primary-dark: #C25E24;
+  --color-primary-soft: #F4C9A8;
+  --color-bg: #FBF2E4;
+  --color-ink: #2B1E14;
+  --color-text-secondary: #5C4733;
+  --color-ready: #4F7A3A;
+  --color-preparing: #D4A22A;
+  --color-late: #B3392E;
+
+  --font-display: var(--font-caveat), cursive;
+  --font-body: var(--font-archivo), sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
