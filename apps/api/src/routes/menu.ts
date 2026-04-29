@@ -1,29 +1,24 @@
 import { Router } from "express";
-import { db } from "../db";
-import { menuItems } from "../schema";
-import { eq } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import * as menuService from "../services/menu.service";
 
 export const menuRouter = Router();
 
 menuRouter.get("/", async (_req, res) => {
-  const rows = await db.select().from(menuItems).orderBy(menuItems.sortOrder);
-  res.json(rows);
+  const items = await menuService.getAll();
+  res.json(items);
 });
 
 menuRouter.post("/", async (req, res) => {
-  const item = { id: randomUUID(), ...req.body };
-  await db.insert(menuItems).values(item);
+  const item = await menuService.create(req.body);
   res.status(201).json(item);
 });
 
 menuRouter.patch("/:id", async (req, res) => {
-  const { id } = req.params;
-  await db.update(menuItems).set(req.body).where(eq(menuItems.id, id));
-  res.json({ id, ...req.body });
+  const item = await menuService.update(req.params.id, req.body);
+  res.json(item);
 });
 
 menuRouter.delete("/:id", async (req, res) => {
-  await db.delete(menuItems).where(eq(menuItems.id, req.params.id));
+  await menuService.remove(req.params.id);
   res.status(204).end();
 });

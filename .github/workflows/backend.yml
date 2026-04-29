@@ -1,4 +1,4 @@
-name: API CI/CD
+name: Backend CI/CD
 
 on:
   push:

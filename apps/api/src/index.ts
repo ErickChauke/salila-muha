@@ -1,32 +1,21 @@
 import "dotenv/config";
+import { createServer } from "http";
 import express from "express";
 import cors from "cors";
-import { createServer } from "http";
-import { Server } from "socket.io";
-import { ordersRouter } from "./routes/orders";
-import { menuRouter } from "./routes/menu";
-import { paymentsRouter } from "./routes/payments";
+import { setupSocket } from "./lib/socket";
+import { router } from "./routes";
+import { errorHandler } from "./middleware/error";
 
 const app = express();
-const httpServer = createServer(app);
-
-export const io = new Server(httpServer, {
-  cors: { origin: process.env.WEB_URL ?? "http://localhost:3000" },
-});
 
 app.use(cors({ origin: process.env.WEB_URL ?? "http://localhost:3000" }));
 app.use(express.json());
-
-app.use("/api/orders", ordersRouter);
-app.use("/api/menu", menuRouter);
-app.use("/api/payments", paymentsRouter);
-
+app.use("/api", router);
 app.get("/health", (_req, res) => res.json({ ok: true }));
+app.use(errorHandler);
 
-io.on("connection", (socket) => {
-  socket.join("kitchen");
-  socket.on("disconnect", () => {});
-});
+const httpServer = createServer(app);
+setupSocket(httpServer);
 
 const PORT = process.env.PORT ?? 3001;
 httpServer.listen(PORT, () => {
