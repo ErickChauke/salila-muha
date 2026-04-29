@@ -3,10 +3,10 @@ name: Backend CI/CD
 on:
   push:
     branches: [main]
-    paths: ["apps/api/**", "packages/**"]
+    paths: ["apps/backend/**", "packages/**"]
   pull_request:
     branches: [main]
-    paths: ["apps/api/**", "packages/**"]
+    paths: ["apps/backend/**", "packages/**"]
 
 jobs:
   ci:
@@ -25,13 +25,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter api typecheck
+      - run: pnpm --filter backend typecheck
 
-      - run: pnpm --filter api lint
+      - run: pnpm --filter backend lint
 
-      - run: pnpm --filter api test
+      - run: pnpm --filter backend test
 
-      - run: pnpm --filter api build
+      - run: pnpm --filter backend build
 
   deploy:
     needs: ci
@@ -50,5 +50,5 @@ jobs:
             cd /home/${{ secrets.EC2_USER }}/salila-muha
             git pull origin main
             pnpm install --frozen-lockfile
-            pnpm --filter api build
-            pm2 startOrRestart apps/api/ecosystem.config.js --env production
+            pnpm --filter backend build
+            pm2 startOrRestart apps/backend/ecosystem.config.js --env production

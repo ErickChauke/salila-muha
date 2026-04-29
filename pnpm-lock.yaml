@@ -12,7 +12,7 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
-  apps/api:
+  apps/backend:
     dependencies:
       '@salila/types':
         specifier: workspace:*
@@ -76,7 +76,7 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)
 
-  apps/web:
+  apps/frontend:
     dependencies:
       '@salila/types':
         specifier: workspace:*

@@ -3,10 +3,10 @@ name: Frontend CI/CD
 on:
   push:
     branches: [main]
-    paths: ["apps/web/**", "packages/**"]
+    paths: ["apps/frontend/**", "packages/**"]
   pull_request:
     branches: [main]
-    paths: ["apps/web/**", "packages/**"]
+    paths: ["apps/frontend/**", "packages/**"]
 
 jobs:
   ci:
@@ -25,13 +25,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter web typecheck
+      - run: pnpm --filter frontend typecheck
 
-      - run: pnpm --filter web lint
+      - run: pnpm --filter frontend lint
 
-      - run: pnpm --filter web test
+      - run: pnpm --filter frontend test
 
-      - run: pnpm --filter web build
+      - run: pnpm --filter frontend build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
