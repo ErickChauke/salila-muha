@@ -2,10 +2,10 @@ name: API CI/CD
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths: ["apps/api/**", "packages/**"]
   pull_request:
-    branches: [master]
+    branches: [main]
     paths: ["apps/api/**", "packages/**"]
 
 jobs:
@@ -51,4 +51,4 @@ jobs:
             git pull origin main
             pnpm install --frozen-lockfile
             pnpm --filter api build
-            pm2 restart api
+            pm2 startOrRestart apps/api/ecosystem.config.js --env production
