@@ -27,5 +27,4 @@ npm-debug.log*
 # Design assets (not for production)
 design_prototype/
 
-# Implementation notes and documentation (not for production)
-docs/
+# Design assets (local only)
