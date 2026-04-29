@@ -16,9 +16,9 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.10",
     "express": "^4.19.2",
+    "nodemailer": "^6.9.13",
     "pg": "^8.11.5",
-    "socket.io": "^4.7.5",
-    "nodemailer": "^6.9.13"
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -28,8 +28,10 @@
     "@types/pg": "^8.11.6",
     "drizzle-kit": "^0.21.4",
     "eslint": "^9.3.0",
+    "globals": "^17.5.0",
     "tsx": "^4.11.0",
     "typescript": "^5.4.5",
+    "typescript-eslint": "^8.59.1",
     "vitest": "^1.6.0"
   }
 }
