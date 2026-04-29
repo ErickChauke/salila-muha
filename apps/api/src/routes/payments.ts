@@ -32,7 +32,7 @@ paymentsRouter.post("/charge", async (req, res) => {
     return res.status(402).json({ error: charge.error?.message ?? "Payment failed" });
   }
 
-  const updatedAt = new Date().toISOString();
+  const updatedAt = new Date();
   await db
     .update(orders)
     .set({ status: "accepted", paymentRef: charge.id, paidAt: new Date(), updatedAt })

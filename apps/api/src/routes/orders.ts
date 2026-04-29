@@ -15,7 +15,7 @@ ordersRouter.get("/", async (_req, res) => {
 
 ordersRouter.post("/", async (req, res) => {
   const body = req.body as Omit<Order, "id" | "status" | "createdAt" | "updatedAt" | "paidAt" | "paymentRef">;
-  const now = new Date().toISOString();
+  const now = new Date();
   const order = {
     id: randomUUID(),
     ...body,
@@ -34,7 +34,7 @@ ordersRouter.post("/", async (req, res) => {
 ordersRouter.patch("/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body as { status: Order["status"] };
-  const updatedAt = new Date().toISOString();
+  const updatedAt = new Date();
 
   await db.update(orders).set({ status, updatedAt }).where(eq(orders.id, id));
   io.to("kitchen").emit("order:updated", { id, status, updatedAt });
