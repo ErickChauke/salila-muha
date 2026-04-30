@@ -17,7 +17,7 @@
 | Database | AWS RDS PostgreSQL | `af-south-1`, free tier, SSL required |
 | Auth | Supabase | Hosted auth only, data lives in RDS |
 | Storage | AWS S3 | `af-south-1`, for menu item images |
-| Payments | Yoco | Test mode (pending approval) |
+| Payments | PayFast | Sandbox mode (account approval pending) |
 
 ## How deploys work
 
@@ -49,7 +49,6 @@ The browser only ever talks to the Vercel domain. Vercel proxies to EC2 server-s
 | `NEXT_PUBLIC_API_URL` | _(empty - uses Vercel proxy rewrites)_ |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://ooomesctuzdqdknqxjka.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_SefS311lbyp7NjBsS24akA_Qbr0v0Qf` |
-| `NEXT_PUBLIC_YOCO_PUBLIC_KEY` | `pk_test_placeholder` |
 
 ### EC2 `.env` (backend)
 
@@ -60,6 +59,12 @@ The browser only ever talks to the Vercel domain. Vercel proxies to EC2 server-s
 | `WEB_URL` | Vercel frontend URL (for CORS) |
 | `SMTP_*` | Gmail app password credentials |
 | `AWS_*` | S3 credentials |
+| `PAYFAST_MERCHANT_ID` | From PayFast dashboard |
+| `PAYFAST_MERCHANT_KEY` | From PayFast dashboard |
+| `PAYFAST_PASSPHRASE` | Set in PayFast dashboard under Settings |
+| `PAYFAST_SANDBOX` | `true` (sandbox) or `false` (live) |
+| `FRONTEND_URL` | `https://salila-muha.vercel.app` |
+| `BACKEND_URL` | `http://13.244.64.123` |
 
 ## Database
 
@@ -75,3 +80,48 @@ pnpm --filter backend db:push
 ```
 
 RDS is in the same VPC as EC2, so `db:push` must be run from EC2 (not locally).
+
+## TODO - PayFast go-live checklist
+
+Once the PayFast merchant account is approved, complete these steps in order:
+
+### 1. Update EC2 env vars with real credentials
+
+SSH into EC2 and run:
+
+```bash
+sed -i 's/^PAYFAST_MERCHANT_ID=.*/PAYFAST_MERCHANT_ID=your_real_id/' ~/salila-muha/.env
+sed -i 's/^PAYFAST_MERCHANT_KEY=.*/PAYFAST_MERCHANT_KEY=your_real_key/' ~/salila-muha/.env
+sed -i 's/^PAYFAST_PASSPHRASE=.*/PAYFAST_PASSPHRASE=your_real_passphrase/' ~/salila-muha/.env
+pm2 restart api
+```
+
+Credentials are found in the PayFast dashboard under My Account > Settings > Integration.
+
+### 2. Test in sandbox mode first
+
+Keep `PAYFAST_SANDBOX=true` and place a test card order end-to-end:
+- Order redirects to `sandbox.payfast.co.za`
+- Complete payment with PayFast test card details
+- Check backend logs: `pm2 logs api --lines 30`
+- Verify order status in DB changes to `accepted`
+- Confirm `/pay/success?order_id=<id>` page loads and links to tracking
+
+### 3. Switch to live mode
+
+Once sandbox testing passes:
+
+```bash
+sed -i 's/^PAYFAST_SANDBOX=.*/PAYFAST_SANDBOX=false/' ~/salila-muha/.env
+pm2 restart api
+```
+
+### 4. Set up PayFast ITN URL in dashboard
+
+In the PayFast dashboard under Settings > Integration, set the notify URL to:
+
+```
+http://13.244.64.123/api/payments/notify
+```
+
+This is also set automatically via the `BACKEND_URL` env var in code, but confirming it in the dashboard ensures PayFast retries on failure.
