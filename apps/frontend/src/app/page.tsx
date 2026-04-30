@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useMenu } from "../hooks/useMenu";
 import type { MenuItem } from "@salila/types";
 
@@ -12,6 +13,22 @@ const CATEGORIES: Array<{ key: MenuItem["category"]; label: string }> = [
 
 export default function HomePage() {
   const { items, loading } = useMenu();
+  const [cart, setCart] = useState<Record<string, number>>({});
+
+  function add(id: string) {
+    setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
+  }
+  function remove(id: string) {
+    setCart((c) => {
+      const qty = (c[id] ?? 0) - 1;
+      if (qty <= 0) { const n = { ...c }; delete n[id]; return n; }
+      return { ...c, [id]: qty };
+    });
+  }
+
+  const cartItems = items.filter((i) => (cart[i.id] ?? 0) > 0);
+  const cartCount = cartItems.reduce((s, i) => s + cart[i.id], 0);
+  const cartTotal = cartItems.reduce((s, i) => s + i.price * cart[i.id], 0);
 
   if (loading) {
     return (
@@ -56,16 +73,31 @@ export default function HomePage() {
                 <span style={{ fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
                   R{(item.price / 100).toFixed(0)}
                 </span>
-                <button
-                  style={{ width: 28, height: 28, borderRadius: 6, background: "var(--color-bg)", border: "1.5px solid var(--color-ink)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", flexShrink: 0, boxShadow: "1px 1px 0 0 var(--color-ink)" }}
-                >
-                  +
-                </button>
+                {(cart[item.id] ?? 0) > 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => remove(item.id)} style={{ width: 26, height: 26, borderRadius: 6, background: "var(--color-bg)", border: "1.5px solid var(--color-ink)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>-</button>
+                    <span style={{ fontWeight: 800, fontSize: 13, minWidth: 14, textAlign: "center" }}>{cart[item.id]}</span>
+                    <button onClick={() => add(item.id)} style={{ width: 26, height: 26, borderRadius: 6, background: "var(--color-primary)", border: "1.5px solid var(--color-ink)", cursor: "pointer", fontSize: 16, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                  </div>
+                ) : (
+                  <button onClick={() => add(item.id)} style={{ width: 28, height: 28, borderRadius: 6, background: "var(--color-bg)", border: "1.5px solid var(--color-ink)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, cursor: "pointer", flexShrink: 0, boxShadow: "1px 1px 0 0 var(--color-ink)" }}>+</button>
+                )}
               </div>
             ))}
           </div>
         );
       })}
+      {cartCount > 0 && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "12px 16px", background: "var(--color-ink)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1.5px solid var(--color-ink)" }}>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", opacity: 0.7 }}>{cartCount} {cartCount === 1 ? "ITEM" : "ITEMS"}</div>
+            <div style={{ fontWeight: 800, fontSize: 15, marginTop: 1 }}>R{(cartTotal / 100).toFixed(0)}</div>
+          </div>
+          <button style={{ background: "var(--color-primary)", border: "1.5px solid var(--color-primary-dark)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
+            CHECKOUT -&gt;
+          </button>
+        </div>
+      )}
     </main>
   );
 }
