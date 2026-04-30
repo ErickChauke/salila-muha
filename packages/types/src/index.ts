@@ -43,7 +43,7 @@ export interface Order {
 
 export interface User {
   id: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   name: string;
   role: "customer" | "kitchen" | "admin";
