@@ -51,3 +51,31 @@ export function requireRole(...roles: Array<"customer" | "kitchen" | "admin">) {
     next();
   };
 }
+
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) {
+    next();
+    return;
+  }
+
+  const token = header.slice(7);
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) {
+    next();
+    return;
+  }
+
+  const [row] = await db.select().from(users).where(eq(users.id, data.user.id)).limit(1);
+  if (row) {
+    req.user = {
+      id: row.id,
+      phone: row.phone,
+      email: row.email ?? null,
+      name: row.name,
+      role: row.role as "customer" | "kitchen" | "admin",
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+  next();
+}

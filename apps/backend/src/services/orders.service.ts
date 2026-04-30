@@ -9,6 +9,11 @@ export async function getAll() {
   return db.select().from(orders).orderBy(orders.createdAt);
 }
 
+export async function getById(id: string) {
+  const [row] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  return row ?? null;
+}
+
 export async function create(body: Omit<Order, "id" | "status" | "createdAt" | "updatedAt" | "paidAt" | "paymentRef">) {
   const now = new Date();
   const order = {
