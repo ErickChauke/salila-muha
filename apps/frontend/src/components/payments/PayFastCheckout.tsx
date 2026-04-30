@@ -8,22 +8,26 @@ interface Props {
   customerPhone: string;
   items: OrderItem[];
   totalInCents: number;
+  token?: string;
   onError: (message: string) => void;
 }
 
-export function PayFastCheckout({ customerName, customerPhone, items, totalInCents, onError }: Props) {
+export function PayFastCheckout({ customerName, customerPhone, items, totalInCents, token, onError }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function handlePay() {
-    if (!customerName.trim() || !customerPhone.trim()) {
-      onError("Name and phone are required.");
+    if (!customerName.trim()) {
+      onError("Name is required.");
       return;
     }
     setLoading(true);
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const res = await fetch("/api/payments/initiate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ customerName, customerPhone, items, total: totalInCents }),
     });
 

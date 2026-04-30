@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMenu } from "../hooks/useMenu";
+import { useAuth } from "../context/auth";
 import type { MenuItem, OrderItem } from "@salila/types";
 import { apiFetch } from "../lib/api";
 import { PayFastCheckout } from "../components/payments/PayFastCheckout";
@@ -17,12 +18,28 @@ const CATEGORIES: Array<{ key: MenuItem["category"]; label: string }> = [
 export default function HomePage() {
   const router = useRouter();
   const { items, loading } = useMenu();
+  const { user, session } = useAuth();
   const [cart, setCart] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"menu" | "form">("menu");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [notifyBySms, setNotifyBySms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Restore cart saved before login redirect
+  useEffect(() => {
+    const saved = sessionStorage.getItem("cart");
+    if (saved) {
+      try { setCart(JSON.parse(saved) as Record<string, number>); } catch { /* ignore */ }
+      sessionStorage.removeItem("cart");
+    }
+  }, []);
+
+  // Pre-fill name from logged-in user
+  useEffect(() => {
+    if (user && !name) setName(user.name);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function add(id: string) {
     setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
@@ -43,14 +60,36 @@ export default function HomePage() {
     menuItemId: i.id, name: i.name, quantity: cart[i.id], unitPrice: i.price, notes: null,
   }));
 
+  function handleCheckout() {
+    if (!user) {
+      sessionStorage.setItem("cart", JSON.stringify(cart));
+      router.push("/login?next=/");
+      return;
+    }
+    setStep("form");
+  }
+
   async function submitCash() {
-    if (!name.trim() || !phone.trim()) { setError("Name and phone are required."); return; }
+    if (!name.trim()) { setError("Name is required."); return; }
     setSubmitting(true); setError("");
     try {
       const res = await apiFetch<{ id: string }>("/api/orders", {
         method: "POST",
-        body: JSON.stringify({ customerName: name.trim(), customerPhone: phone.trim(), items: orderItems, total: cartTotal }),
-      });
+        body: JSON.stringify({
+          customerName: name.trim(),
+          customerPhone: phone.trim(),
+          items: orderItems,
+          total: cartTotal,
+        }),
+      }, session?.access_token);
+
+      if (session?.access_token && phone.trim()) {
+        apiFetch("/api/auth/me", {
+          method: "PATCH",
+          body: JSON.stringify({ phone: phone.trim(), notifyBySms }),
+        }, session.access_token).catch(() => {});
+      }
+
       router.push(`/track/${res.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to place order.");
@@ -122,7 +161,7 @@ export default function HomePage() {
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", opacity: 0.7 }}>{cartCount} {cartCount === 1 ? "ITEM" : "ITEMS"}</div>
             <div style={{ fontWeight: 800, fontSize: 15, marginTop: 1 }}>R{(cartTotal / 100).toFixed(0)}</div>
           </div>
-          <button onClick={() => setStep("form")} style={{ background: "var(--color-primary)", border: "1.5px solid var(--color-primary-dark)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
+          <button onClick={handleCheckout} style={{ background: "var(--color-primary)", border: "1.5px solid var(--color-primary-dark)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
             CHECKOUT -&gt;
           </button>
         </div>
@@ -139,10 +178,25 @@ export default function HomePage() {
               <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 4 }}>NAME</label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Thabo" style={{ width: "100%", padding: "10px 12px", border: "1.5px solid var(--color-ink)", borderRadius: 8, background: "var(--color-bg)", fontSize: 14, fontFamily: "var(--font-body)" }} />
             </div>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 4 }}>PHONE</label>
+            <div style={{ marginBottom: phone.trim() ? 12 : 20 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 4 }}>
+                PHONE <span style={{ fontWeight: 400, opacity: 0.5 }}>(optional)</span>
+              </label>
               <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 0821234567" type="tel" style={{ width: "100%", padding: "10px 12px", border: "1.5px solid var(--color-ink)", borderRadius: 8, background: "var(--color-bg)", fontSize: 14, fontFamily: "var(--font-body)" }} />
             </div>
+            {phone.trim() && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={notifyBySms}
+                  onChange={(e) => setNotifyBySms(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: "var(--color-primary)" }}
+                />
+                <span style={{ fontSize: 13, fontFamily: "var(--font-body)" }}>
+                  SMS me when my order is ready
+                </span>
+              </label>
+            )}
             {error && <p style={{ color: "var(--color-late)", fontSize: 12, marginBottom: 12 }}>{error}</p>}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button onClick={submitCash} disabled={submitting} style={{ width: "100%", background: "var(--color-ink)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "13px", borderRadius: 8, border: "1.5px solid var(--color-ink)", cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.7 : 1 }}>
@@ -153,6 +207,7 @@ export default function HomePage() {
                 customerPhone={phone.trim()}
                 items={orderItems}
                 totalInCents={cartTotal}
+                token={session?.access_token}
                 onError={(msg) => { setError(msg); setSubmitting(false); }}
               />
             </div>

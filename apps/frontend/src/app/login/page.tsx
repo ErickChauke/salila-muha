@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "../../lib/supabase";
 import type { User } from "@salila/types";
 
@@ -11,8 +11,11 @@ function roleRedirect(role: User["role"]) {
   return role === "admin" ? "/admin" : "/kitchen";
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/";
+
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -28,15 +31,19 @@ export default function LoginPage() {
       });
       if (res.ok) {
         const user = (await res.json()) as User;
-        router.replace(roleRedirect(user.role));
+        if (user.role === "customer") {
+          router.replace(next);
+        } else {
+          router.replace(roleRedirect(user.role));
+        }
       }
     });
-  }, [router]);
+  }, [router, next]);
 
   async function signInWithGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin + "/auth/callback" },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     });
   }
 
@@ -332,5 +339,13 @@ export default function LoginPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

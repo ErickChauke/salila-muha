@@ -6,6 +6,7 @@ type CookieToSet = { name: string; value: string; options: Record<string, unknow
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/";
   const origin = new URL(request.url).origin;
 
   if (!code) {
@@ -36,7 +37,9 @@ export async function GET(request: NextRequest) {
     headers: { Authorization: `Bearer ${data.session.access_token}` },
   });
 
-  let dest = "/";
+  // guard against open redirect — only allow paths on this origin
+  const safeDest = next.startsWith("/") ? next : "/";
+  let dest = safeDest;
   if (meRes.ok) {
     const user = (await meRes.json()) as { role: string };
     if (user.role === "kitchen") dest = "/kitchen";
