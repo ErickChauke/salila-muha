@@ -57,13 +57,20 @@ export function YocoCheckout({ customerName, customerPhone, items, totalInCents,
     if (!sdkRef.current) return;
     setLoading(true);
 
-    const orderId = crypto.randomUUID();
-
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+    const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: orderId, customerName, customerPhone, items, total: totalInCents }),
+      body: JSON.stringify({ customerName, customerPhone, items, total: totalInCents }),
     });
+
+    if (!orderRes.ok) {
+      setLoading(false);
+      onError("Could not place order. Please try again.");
+      return;
+    }
+
+    const order = await orderRes.json() as { id: string };
+    const orderId = order.id;
 
     sdkRef.current.showPopup({
       amountInCents: totalInCents,
