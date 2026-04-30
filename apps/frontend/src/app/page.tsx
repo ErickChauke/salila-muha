@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMenu } from "../hooks/useMenu";
 import type { MenuItem, OrderItem } from "@salila/types";
 import { apiFetch } from "../lib/api";
+import { YocoCheckout } from "../components/payments/YocoCheckout";
 
 const CATEGORIES: Array<{ key: MenuItem["category"]; label: string }> = [
   { key: "kota", label: "KOTA" },
@@ -140,9 +141,19 @@ export default function HomePage() {
               <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 0821234567" type="tel" style={{ width: "100%", padding: "10px 12px", border: "1.5px solid var(--color-ink)", borderRadius: 8, background: "var(--color-bg)", fontSize: 14, fontFamily: "var(--font-body)" }} />
             </div>
             {error && <p style={{ color: "var(--color-late)", fontSize: 12, marginBottom: 12 }}>{error}</p>}
-            <button onClick={submitCash} disabled={submitting} style={{ width: "100%", background: "var(--color-ink)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "13px", borderRadius: 8, border: "1.5px solid var(--color-ink)", cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.7 : 1 }}>
-              {submitting ? "Placing order..." : `ORDER + PAY AT COLLECTION - R${(cartTotal / 100).toFixed(0)}`}
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <button onClick={submitCash} disabled={submitting} style={{ width: "100%", background: "var(--color-ink)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "13px", borderRadius: 8, border: "1.5px solid var(--color-ink)", cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.7 : 1 }}>
+                {submitting ? "Placing order..." : `ORDER + PAY AT COLLECTION - R${(cartTotal / 100).toFixed(0)}`}
+              </button>
+              <YocoCheckout
+                customerName={name.trim()}
+                customerPhone={phone.trim()}
+                items={cartItems.map((i) => ({ menuItemId: i.id, name: i.name, quantity: cart[i.id], unitPrice: i.price, notes: null }))}
+                totalInCents={cartTotal}
+                onSuccess={(id) => router.push(`/track/${id}`)}
+                onError={(msg) => { setError(msg); setSubmitting(false); }}
+              />
+            </div>
           </div>
         </div>
       )}
