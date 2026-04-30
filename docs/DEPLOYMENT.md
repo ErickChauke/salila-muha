@@ -72,14 +72,11 @@ RDS PostgreSQL with Drizzle ORM. Schema lives in `apps/backend/src/db/schema/`.
 
 Tables: `users`, `menu_items`, `orders` plus enums `order_status`, `menu_category`.
 
-To sync schema changes to the database, SSH into EC2 and run:
+Schema migrations run automatically on every backend deploy via GitHub Actions. The deploy
+script runs `pnpm --filter backend db:push` on EC2 before building and restarting PM2.
+No manual SSH needed after a schema change - merge the PR and it applies itself.
 
-```bash
-cd /home/ec2-user/salila-muha
-pnpm --filter backend db:push
-```
-
-RDS is in the same VPC as EC2, so `db:push` must be run from EC2 (not locally).
+Note: RDS is in the same VPC as EC2, so migrations run from EC2 (not from GitHub runners).
 
 ## TODO - PayFast go-live checklist
 
