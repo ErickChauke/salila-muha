@@ -52,5 +52,6 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             pnpm install --frozen-lockfile
+            pnpm --filter backend db:push
             pnpm --filter backend build
             pm2 startOrRestart apps/backend/ecosystem.config.js --env production
