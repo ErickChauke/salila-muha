@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { db } from "../db";
 import { users } from "../db/schema/users";
 import { eq } from "drizzle-orm";
+import { requireAuth } from "../middleware/auth";
 
 export const authRouter = Router();
 
@@ -51,6 +52,19 @@ authRouter.get("/me", async (req, res) => {
     email: row.email ?? null,
     name: row.name,
     role: row.role as "customer" | "kitchen" | "admin",
+    notifyBySms: row.notifyBySms,
     createdAt: row.createdAt.toISOString(),
   });
+});
+
+authRouter.patch("/me", requireAuth, async (req, res) => {
+  const { phone, notifyBySms } = req.body as { phone?: string; notifyBySms?: boolean };
+  await db
+    .update(users)
+    .set({
+      ...(phone !== undefined ? { phone: phone.trim() || null } : {}),
+      notifyBySms: notifyBySms ?? false,
+    })
+    .where(eq(users.id, req.user!.id));
+  res.json({ ok: true });
 });

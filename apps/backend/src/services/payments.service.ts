@@ -11,6 +11,7 @@ interface InitiateParams {
   customerPhone: string;
   items: OrderItem[];
   total: number;
+  customerId?: string | null;
 }
 
 const PAYFAST_URL = process.env.PAYFAST_SANDBOX === "true"
@@ -28,8 +29,8 @@ function buildSignature(params: Record<string, string>, passphrase?: string): st
   return crypto.createHash("md5").update(final).digest("hex");
 }
 
-export async function initiate({ customerName, customerPhone, items, total }: InitiateParams) {
-  const order = await ordersService.create({ customerName, customerPhone, items, total, customerId: null });
+export async function initiate({ customerName, customerPhone, items, total, customerId = null }: InitiateParams) {
+  const order = await ordersService.create({ customerName, customerPhone, items, total, customerId });
 
   const frontendUrl = process.env.FRONTEND_URL ?? "https://salila-muha.vercel.app";
   const backendUrl = process.env.BACKEND_URL ?? "http://13.244.64.123";

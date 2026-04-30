@@ -1,10 +1,11 @@
 import { Router, urlencoded } from "express";
 import type { OrderItem } from "@salila/types";
 import * as paymentsService from "../services/payments.service";
+import { optionalAuth } from "../middleware/auth";
 
 export const paymentsRouter = Router();
 
-paymentsRouter.post("/initiate", async (req, res) => {
+paymentsRouter.post("/initiate", optionalAuth, async (req, res) => {
   const { customerName, customerPhone, items, total } = req.body as {
     customerName: string;
     customerPhone: string;
@@ -12,11 +13,17 @@ paymentsRouter.post("/initiate", async (req, res) => {
     total: number;
   };
 
-  if (!customerName || !customerPhone || !items?.length || !total) {
+  if (!customerName || !items?.length || !total) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const result = await paymentsService.initiate({ customerName, customerPhone, items, total });
+  const result = await paymentsService.initiate({
+    customerName,
+    customerPhone: customerPhone ?? "",
+    items,
+    total,
+    customerId: req.user?.id ?? null,
+  });
   return res.json(result);
 });
 
