@@ -57,13 +57,19 @@ export function YocoCheckout({ customerName, customerPhone, items, totalInCents,
     if (!sdkRef.current) return;
     setLoading(true);
 
-    const orderId = crypto.randomUUID();
-
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+    const orderRes = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: orderId, customerName, customerPhone, items, total: totalInCents }),
+      body: JSON.stringify({ customerName, customerPhone, items, total: totalInCents }),
     });
+
+    if (!orderRes.ok) {
+      setLoading(false);
+      onError("Could not place order. Please try again.");
+      return;
+    }
+
+    const order = await orderRes.json() as { id: string };
 
     sdkRef.current.showPopup({
       amountInCents: totalInCents,
@@ -77,15 +83,15 @@ export function YocoCheckout({ customerName, customerPhone, items, totalInCents,
           return;
         }
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/charge`, {
+        const res = await fetch("/api/payments/charge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: result.id, amountInCents: totalInCents, orderId }),
+          body: JSON.stringify({ token: result.id, amountInCents: totalInCents, orderId: order.id }),
         });
 
         setLoading(false);
         if (res.ok) {
-          onSuccess(orderId);
+          onSuccess(order.id);
         } else {
           const data = await res.json() as { error: string };
           onError(data.error);
@@ -95,8 +101,12 @@ export function YocoCheckout({ customerName, customerPhone, items, totalInCents,
   }
 
   return (
-    <button onClick={handlePay} disabled={loading || !sdkReady}>
-      {loading ? "Processing..." : `Pay R${(totalInCents / 100).toFixed(2)}`}
+    <button
+      onClick={handlePay}
+      disabled={loading || !sdkReady}
+      style={{ width: "100%", background: "var(--color-primary)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "13px", borderRadius: 8, border: "1.5px solid var(--color-primary-dark)", cursor: loading || !sdkReady ? "default" : "pointer", opacity: loading || !sdkReady ? 0.7 : 1 }}
+    >
+      {loading ? "Processing..." : `PAY BY CARD - R${(totalInCents / 100).toFixed(0)}`}
     </button>
   );
 }
