@@ -7,16 +7,18 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://13.244.64.123/api/:path*",
-      },
-      {
-        source: "/socket.io/:path*",
-        destination: "http://13.244.64.123/socket.io/:path*",
-      },
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: "/api/:path*",
+          destination: "http://13.244.64.123/api/:path*",
+        },
+        {
+          source: "/socket.io/:path*",
+          destination: "http://13.244.64.123/socket.io/:path*",
+        },
+      ],
+    };
   },
 };
 
