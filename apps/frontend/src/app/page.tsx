@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMenu } from "../hooks/useMenu";
 import type { MenuItem, OrderItem } from "@salila/types";
 import { apiFetch } from "../lib/api";
-import { YocoCheckout } from "../components/payments/YocoCheckout";
+import { PayFastCheckout } from "../components/payments/PayFastCheckout";
 
 const CATEGORIES: Array<{ key: MenuItem["category"]; label: string }> = [
   { key: "kota", label: "KOTA" },
@@ -148,12 +148,11 @@ export default function HomePage() {
               <button onClick={submitCash} disabled={submitting} style={{ width: "100%", background: "var(--color-ink)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "13px", borderRadius: 8, border: "1.5px solid var(--color-ink)", cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.7 : 1 }}>
                 {submitting ? "Placing order..." : `ORDER + PAY AT COLLECTION - R${(cartTotal / 100).toFixed(0)}`}
               </button>
-              <YocoCheckout
+              <PayFastCheckout
                 customerName={name.trim()}
                 customerPhone={phone.trim()}
                 items={orderItems}
                 totalInCents={cartTotal}
-                onSuccess={(id) => router.push(`/track/${id}`)}
                 onError={(msg) => { setError(msg); setSubmitting(false); }}
               />
             </div>
