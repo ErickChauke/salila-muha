@@ -26,7 +26,8 @@ export async function middleware(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
-  const requiredRoles = PROTECTED[pathname] ?? null;
+  const matchedPrefix = Object.keys(PROTECTED).find((prefix) => pathname.startsWith(prefix));
+  const requiredRoles = matchedPrefix ? PROTECTED[matchedPrefix] : null;
 
   // Unauthenticated user hitting a protected route
   if (requiredRoles && !data.user) {
@@ -52,5 +53,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/kitchen", "/admin", "/login"],
+  matcher: ["/kitchen", "/admin", "/admin/:path*", "/login"],
 };
