@@ -34,6 +34,6 @@ export async function create(body: Omit<Order, "id" | "status" | "createdAt" | "
 export async function updateStatus(id: string, status: Order["status"]) {
   const updatedAt = new Date();
   await db.update(orders).set({ status, updatedAt }).where(eq(orders.id, id));
-  getIO().to("kitchen").emit("order:updated", { id, status, updatedAt });
+  getIO().emit("order:updated", { id, status, updatedAt });
   return { id, status, updatedAt };
 }
