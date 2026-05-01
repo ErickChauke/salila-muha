@@ -28,6 +28,17 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // If Supabase fell back to the Site URL (port mismatch or missing allowlist entry),
+  // the OAuth code lands here as /?code=... — forward it to the callback route.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (code) {
+      router.replace(`/auth/callback?${params.toString()}`);
+      return;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const saved = sessionStorage.getItem("cart");
     if (saved) {
