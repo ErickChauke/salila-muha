@@ -6,8 +6,9 @@ module.exports = {
       name: 'api',
       script: 'dist/index.js',
       cwd: __dirname,
-      node_args: '-r dotenv/config',
+      exec_mode: 'fork',
       instances: 1,
+      node_args: '-r dotenv/config',
       autorestart: true,
       watch: false,
       env: {
