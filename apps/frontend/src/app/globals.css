@@ -3,6 +3,7 @@
   --color-primary-dark: #C25E24;
   --color-primary-soft: #F4C9A8;
   --color-bg: #FBF2E4;
+  --color-paper: #F5E8D0;
   --color-ink: #2B1E14;
   --color-text-secondary: #5C4733;
   --color-ready: #4F7A3A;
@@ -23,4 +24,51 @@ body {
   font-family: var(--font-body);
   background: var(--color-bg);
   color: var(--color-ink);
+}
+
+/* Home page responsive layout */
+.nav-mobile { display: flex; }
+.nav-desktop { display: none; }
+.hero-desktop { display: none; }
+.cart-rail { display: none; }
+.cart-bar { display: flex; }
+
+.item-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 12px 100px;
+}
+
+@media (min-width: 768px) {
+  .nav-mobile { display: none; }
+  .nav-desktop { display: flex; }
+  .hero-desktop { display: block; }
+
+  .page-body {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    align-items: start;
+  }
+
+  .cat-tabs { position: static !important; }
+
+  .cart-rail {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 62px;
+    height: calc(100vh - 62px);
+    background: var(--color-paper);
+    border-left: 1.5px solid var(--color-ink);
+    overflow-y: auto;
+  }
+
+  .cart-bar { display: none !important; }
+
+  .item-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 16px 24px 40px;
+    gap: 14px;
+  }
 }
