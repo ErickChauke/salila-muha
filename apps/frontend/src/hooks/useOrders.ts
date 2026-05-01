@@ -5,12 +5,13 @@ import type { Order } from "@salila/types";
 import { apiFetch } from "../lib/api";
 import { socket } from "../lib/socket";
 
-export function useOrders() {
+export function useOrders(token?: string) {
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    apiFetch<Order[]>("/api/orders").then(setOrders).catch(console.error);
+    apiFetch<Order[]>("/api/orders", {}, token).then(setOrders).catch(console.error);
 
+    if (token) socket.auth = { token };
     socket.connect();
 
     socket.on("order:new", (order: Order) => {
@@ -26,7 +27,7 @@ export function useOrders() {
       socket.off("order:updated");
       socket.disconnect();
     };
-  }, []);
+  }, [token]);
 
-  return { orders };
+  return { orders, setOrders };
 }
