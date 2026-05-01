@@ -101,7 +101,6 @@ export default function TrackPage() {
           </div>
         ) : (
           <>
-            {/* Status headline */}
             {order.status !== "collected" && (
               <div style={{ textAlign: "center", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "var(--color-ink)", opacity: 0.5 }}>
@@ -144,11 +143,7 @@ export default function TrackPage() {
                     )}
                   </div>
                   <div style={{ paddingTop: 2 }}>
-                    <div style={{
-                      fontWeight: s.active ? 800 : 600,
-                      fontSize: 13,
-                      color: s.done || s.active ? "var(--color-ink)" : "rgba(43,30,20,0.4)",
-                    }}>
+                    <div style={{ fontWeight: s.active ? 800 : 600, fontSize: 13, color: s.done || s.active ? "var(--color-ink)" : "rgba(43,30,20,0.4)" }}>
                       {s.label}
                     </div>
                   </div>
@@ -156,7 +151,7 @@ export default function TrackPage() {
               ))}
             </div>
 
-            {/* Collection box */}
+            {/* Collection info */}
             <div style={{ background: "#fff", border: "1.5px solid var(--color-ink)", borderRadius: 8, padding: "12px 14px", marginBottom: 20 }}>
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", opacity: 0.5, marginBottom: 4 }}>COLLECTION</div>
               <div style={{ fontWeight: 700, fontSize: 13 }}>35 de Korte St, Braamfontein</div>
