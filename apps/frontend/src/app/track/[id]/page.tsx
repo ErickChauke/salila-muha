@@ -2,26 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import type { Order, OrderStatus } from "@salila/types";
+import Link from "next/link";
+import { io } from "socket.io-client";
+import { useAuth } from "../../../context/auth";
 import { apiFetch } from "../../../lib/api";
-import { socket } from "../../../lib/socket";
+import type { Order } from "@salila/types";
 
-const STEPS: Array<{ status: OrderStatus; label: string; icon: string }> = [
-  { status: "pending",    label: "Order placed",          icon: "🧾" },
-  { status: "accepted",   label: "Kitchen accepted",       icon: "👨‍🍳" },
-  { status: "preparing",  label: "Preparing your order",   icon: "🔥" },
-  { status: "ready",      label: "Ready for collection",   icon: "🛍️" },
-  { status: "collected",  label: "Collected - enjoy!",     icon: "✅" },
-];
+type Step = {
+  label: string;
+  done: boolean;
+  active: boolean;
+};
 
-const STATUS_ORDER: OrderStatus[] = ["pending", "accepted", "preparing", "ready", "collected"];
+function buildSteps(status: Order["status"]): Step[] {
+  const statusOrder = ["pending", "accepted", "preparing", "ready", "collected"] as const;
+  const idx = statusOrder.indexOf(status as typeof statusOrder[number]);
 
-function stepIndex(status: OrderStatus) {
-  return STATUS_ORDER.indexOf(status);
+  return [
+    { label: "Order placed",        done: idx > 0, active: idx === 0 },
+    { label: "Kitchen accepted",     done: idx > 1, active: idx === 1 },
+    { label: "Preparing your kota",  done: idx > 2, active: idx === 2 },
+    { label: "Ready for collection", done: idx > 3, active: idx === 3 },
+    { label: "Collected",            done: idx >= 4, active: false },
+  ];
 }
 
 export default function TrackPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
 
@@ -29,100 +37,151 @@ export default function TrackPage() {
     apiFetch<Order>(`/api/orders/${id}`)
       .then(setOrder)
       .catch(() => setNotFound(true));
-
-    socket.connect();
-    socket.on("order:updated", ({ id: uid, status }: Pick<Order, "id" | "status" | "updatedAt">) => {
-      if (uid === id) setOrder((o) => o ? { ...o, status } : o);
-    });
-    return () => { socket.off("order:updated"); socket.disconnect(); };
   }, [id]);
+
+  useEffect(() => {
+    if (!order) return;
+
+    const socket = io({ transports: ["polling"] });
+
+    socket.on("order:updated", (event: { id: string; status: Order["status"]; updatedAt: string }) => {
+      if (event.id === id) {
+        setOrder((prev) => prev ? { ...prev, status: event.status, updatedAt: event.updatedAt } : prev);
+      }
+    });
+
+    return () => { socket.disconnect(); };
+  }, [id, order?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (notFound) {
     return (
-      <main style={{ padding: 24, fontFamily: "var(--font-body)" }}>
-        <p style={{ color: "var(--color-late)", fontWeight: 700 }}>Order not found.</p>
+      <main style={{ minHeight: "100dvh", background: "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-body)", padding: 24 }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 28, marginBottom: 8 }}>Order not found</div>
+          <Link href="/" style={{ fontSize: 13, color: "var(--color-primary)" }}>Back to menu</Link>
+        </div>
       </main>
     );
   }
 
   if (!order) {
     return (
-      <main style={{ padding: 24, fontFamily: "var(--font-body)" }}>
-        Loading order...
+      <main style={{ minHeight: "100dvh", background: "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-body)" }}>
+        <div style={{ fontSize: 13, opacity: 0.6 }}>Loading order...</div>
       </main>
     );
   }
 
   const isRejected = order.status === "rejected";
-  const currentIdx = stepIndex(order.status);
+  const steps = isRejected ? [] : buildSteps(order.status);
+  const shortId = order.id.slice(-4).toUpperCase();
+  const isOwner = user && order.customerId && user.id === order.customerId;
 
   return (
-    <main style={{ fontFamily: "var(--font-body)", maxWidth: 480, margin: "0 auto", padding: "20px 16px 48px" }}>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 30, lineHeight: 1 }}>Salila Muha</div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "var(--color-text-secondary)", marginTop: 3 }}>
-          ORDER #{id.slice(0, 8).toUpperCase()}
-        </div>
+    <main style={{ minHeight: "100dvh", background: "var(--color-bg)", fontFamily: "var(--font-body)" }}>
+      {/* Header */}
+      <div style={{ padding: "12px 16px", borderBottom: "1.5px solid var(--color-ink)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Link href="/" style={{ fontSize: 13, color: "var(--color-ink)", textDecoration: "none", opacity: 0.6 }}>
+          &larr; Menu
+        </Link>
+        <span style={{ fontFamily: "var(--font-display)", fontSize: 20 }}>ORDER #{shortId}</span>
+        <span style={{ width: 48 }} />
       </div>
 
-      {isRejected ? (
-        <div style={{ padding: "16px", background: "#fde8e8", border: "1.5px solid var(--color-late)", borderRadius: 10, marginBottom: 20 }}>
-          <div style={{ fontWeight: 800, color: "var(--color-late)", fontSize: 15 }}>Order rejected</div>
-          <div style={{ fontSize: 13, marginTop: 4, color: "var(--color-ink)" }}>Please call the shop or place a new order.</div>
-        </div>
-      ) : (
-        <div style={{ textAlign: "center", marginBottom: 24, padding: "16px", background: "var(--color-primary-soft)", border: "1.5px solid var(--color-ink)", borderRadius: 10 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 44, lineHeight: 1, color: "var(--color-primary-dark)" }}>
-            {order.status === "ready" || order.status === "collected" ? "Ready!" : "In progress"}
+      <div style={{ padding: 16 }}>
+        {isRejected ? (
+          <div style={{ background: "#fff0f0", border: "1.5px solid #c0392b", borderRadius: 8, padding: "16px", textAlign: "center" }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "#c0392b", marginBottom: 6 }}>Order rejected</div>
+            <div style={{ fontSize: 13, color: "var(--color-ink)", opacity: 0.7 }}>
+              Sorry, we could not accept your order. Please place a new order or contact us.
+            </div>
+            <Link href="/" style={{ display: "inline-block", marginTop: 14, fontSize: 13, color: "var(--color-primary)", fontWeight: 700 }}>
+              Back to menu
+            </Link>
           </div>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "var(--color-text-secondary)", marginTop: 4 }}>
-            {order.status === "ready" ? "HEAD TO THE WINDOW" : order.status === "collected" ? "ENJOY YOUR KOTA" : "WE'LL LET YOU KNOW WHEN READY"}
-          </div>
-        </div>
-      )}
-
-      <div style={{ position: "relative", paddingLeft: 28 }}>
-        <div style={{ position: "absolute", left: 11, top: 14, bottom: 14, width: 2, background: "rgba(43,30,20,0.12)" }} />
-        {STEPS.map((step, i) => {
-          const done = !isRejected && i < currentIdx;
-          const active = !isRejected && i === currentIdx;
-          return (
-            <div key={step.status} style={{ position: "relative", paddingBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <div style={{
-                position: "absolute", left: -28, width: 24, height: 24, borderRadius: "50%",
-                background: done ? "var(--color-ready)" : active ? "var(--color-primary)" : "var(--color-bg)",
-                border: `2px solid ${done ? "var(--color-ready)" : active ? "var(--color-primary)" : "rgba(43,30,20,0.2)"}`,
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
-                boxShadow: active ? "0 0 0 4px rgba(224,122,60,0.2)" : "none",
-              }}>
-                {done ? "✓" : step.icon}
-              </div>
-              <div>
-                <div style={{ fontWeight: active ? 800 : 600, fontSize: 13, color: done || active ? "var(--color-ink)" : "rgba(43,30,20,0.4)" }}>
-                  {step.label}
+        ) : (
+          <>
+            {order.status !== "collected" && (
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "var(--color-ink)", opacity: 0.5 }}>
+                  {order.status === "ready" ? "READY FOR PICKUP" : "ORDER IN PROGRESS"}
                 </div>
               </div>
+            )}
+            {order.status === "collected" && (
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--color-primary)" }}>Enjoy your kota!</div>
+              </div>
+            )}
+
+            {/* T1 vertical timeline */}
+            <div style={{ position: "relative", paddingLeft: 26, marginBottom: 20 }}>
+              <div style={{ position: "absolute", left: 13, top: 10, bottom: 10, width: 2, background: "rgba(43,30,20,0.12)" }} />
+              {steps.map((s, i) => (
+                <div key={i} style={{ position: "relative", paddingBottom: 20, display: "flex", gap: 12 }}>
+                  <div style={{
+                    position: "absolute",
+                    left: -26,
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    background: s.done ? "var(--color-primary)" : s.active ? "var(--color-primary)" : "var(--color-bg)",
+                    border: "2px solid var(--color-ink)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: s.active ? "0 0 0 4px rgba(224,122,60,0.25)" : "none",
+                    flexShrink: 0,
+                  }}>
+                    {s.done && (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                    {s.active && !s.done && (
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
+                    )}
+                  </div>
+                  <div style={{ paddingTop: 2 }}>
+                    <div style={{ fontWeight: s.active ? 800 : 600, fontSize: 13, color: s.done || s.active ? "var(--color-ink)" : "rgba(43,30,20,0.4)" }}>
+                      {s.label}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
 
-      <div style={{ marginTop: 8, padding: "12px 14px", border: "1.5px solid var(--color-ink)", borderRadius: 8, background: "var(--color-bg)" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--color-text-secondary)", marginBottom: 6 }}>YOUR ORDER</div>
-        {order.items.map((item, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", borderBottom: "1px dashed rgba(43,30,20,0.12)" }}>
-            <span>{item.quantity}x {item.name}</span>
-            <span style={{ fontWeight: 700 }}>R{((item.unitPrice * item.quantity) / 100).toFixed(0)}</span>
+            {/* Collection info */}
+            <div style={{ background: "#fff", border: "1.5px solid var(--color-ink)", borderRadius: 8, padding: "12px 14px", marginBottom: 20 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", opacity: 0.5, marginBottom: 4 }}>COLLECTION</div>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>35 de Korte St, Braamfontein</div>
+              <div style={{ fontSize: 11, opacity: 0.55, marginTop: 2 }}>Show order # at the window</div>
+            </div>
+
+            {/* Order summary */}
+            <div style={{ background: "#fff", border: "1.5px solid var(--color-ink)", borderRadius: 8, padding: "12px 14px" }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", opacity: 0.5, marginBottom: 8 }}>YOUR ORDER</div>
+              {(order.items as Array<{ name: string; quantity: number; unitPrice: number }>).map((item, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                  <span>{item.quantity}x {item.name}</span>
+                  <span style={{ fontWeight: 700 }}>R{((item.quantity * item.unitPrice) / 100).toFixed(0)}</span>
+                </div>
+              ))}
+              <div style={{ borderTop: "1px dashed rgba(43,30,20,0.2)", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 14 }}>
+                <span>Total</span>
+                <span>R{(order.total / 100).toFixed(0)}</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {isOwner && (
+          <div style={{ marginTop: 16, textAlign: "center" }}>
+            <Link href="/" style={{ fontSize: 13, color: "var(--color-primary)", fontWeight: 700 }}>
+              &larr; Back to menu
+            </Link>
           </div>
-        ))}
-        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 14, marginTop: 8 }}>
-          <span>Total</span>
-          <span>R{(order.total / 100).toFixed(0)}</span>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 12, fontSize: 11, color: "var(--color-text-secondary)", textAlign: "center" }}>
-        35 de Korte St, Braamfontein - show order # at the window
+        )}
       </div>
     </main>
   );
